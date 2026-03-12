@@ -25,6 +25,183 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// ─── Shared constants (needed by both modal and dashboard styles) ─────────────
+const GREEN = "#1a5c45";
+const SANS  = "'DM Sans', system-ui, sans-serif";
+const SERIF = "'Lora', Georgia, serif";
+const CREAM = "#f7f3ee";
+const CARD  = "#ffffff";
+
+// ─── Edit Profile Modal ───────────────────────────────────────────────────────
+function EditProfileModal({
+  patient,
+  onClose,
+  onSave,
+}: {
+  patient: Patient;
+  onClose: () => void;
+  onSave: (updated: Patient) => void;
+}) {
+  const [form, setForm]     = useState({ ...patient });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState<string | null>(null);
+
+  const set = (field: keyof Patient, value: string | number | null) =>
+    setForm(prev => ({ ...prev, [field]: value }));
+
+  const handleSave = async () => {
+    if (!form.full_name.trim()) { setError("Name is required."); return; }
+    if (!form.phone.trim())     { setError("Phone is required."); return; }
+    setSaving(true);
+    setError(null);
+
+    const { error: supaErr } = await supabase
+      .from("patients")
+      .update({
+        full_name: form.full_name.trim(),
+        age:       form.age ? Number(form.age) : null,
+        gender:    form.gender || null,
+        phone:     form.phone.trim(),
+        village:   form.village?.trim() || null,
+        district:  form.district?.trim() || null,
+        language:  form.language || "english",
+      })
+      .eq("id", patient.id);
+
+    setSaving(false);
+    if (supaErr) { setError("Failed to save. Please try again."); return; }
+    onSave(form);
+  };
+
+  // Close on backdrop click
+  const onBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  return (
+    <div style={m.backdrop} onClick={onBackdrop}>
+      <div style={m.modal}>
+        {/* Header */}
+        <div style={m.header}>
+          <div style={m.headerTitle}>Edit Profile</div>
+          <button style={m.closeBtn} onClick={onClose}>✕</button>
+        </div>
+
+        {/* Fields */}
+        <div style={m.body}>
+          {error && <div style={m.errorBanner}>{error}</div>}
+
+          <div style={m.row}>
+            <label style={m.label}>Full Name *</label>
+            <input
+              style={m.input}
+              value={form.full_name}
+              onChange={e => set("full_name", e.target.value)}
+              placeholder="Full name"
+            />
+          </div>
+
+          <div className="edit-two-col" style={m.twoCol}>
+            <div style={m.row}>
+              <label style={m.label}>Age</label>
+              <input
+                style={m.input}
+                type="number"
+                min={0}
+                max={120}
+                value={form.age ?? ""}
+                onChange={e => set("age", e.target.value ? Number(e.target.value) : null)}
+                placeholder="Age"
+              />
+            </div>
+            <div style={m.row}>
+              <label style={m.label}>Gender</label>
+              <select style={m.input} value={form.gender ?? ""} onChange={e => set("gender", e.target.value || null)}>
+                <option value="">Select…</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={m.row}>
+            <label style={m.label}>Phone *</label>
+            <input
+              style={m.input}
+              value={form.phone}
+              onChange={e => set("phone", e.target.value)}
+              placeholder="Phone number"
+            />
+          </div>
+
+          <div className="edit-two-col" style={m.twoCol}>
+            <div style={m.row}>
+              <label style={m.label}>Village</label>
+              <input
+                style={m.input}
+                value={form.village ?? ""}
+                onChange={e => set("village", e.target.value || null)}
+                placeholder="Village"
+              />
+            </div>
+            <div style={m.row}>
+              <label style={m.label}>District</label>
+              <input
+                style={m.input}
+                value={form.district ?? ""}
+                onChange={e => set("district", e.target.value || null)}
+                placeholder="District"
+              />
+            </div>
+          </div>
+
+          <div style={m.row}>
+            <label style={m.label}>Preferred Language</label>
+            <select style={m.input} value={form.language} onChange={e => set("language", e.target.value)}>
+              <option value="english">English</option>
+              <option value="hindi">Hindi</option>
+              <option value="punjabi">Punjabi</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={m.footer}>
+          <button style={m.cancelBtn} onClick={onClose} disabled={saving}>Cancel</button>
+          <button style={{ ...m.saveBtn, opacity: saving ? 0.7 : 1 }} onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={m.spinner} /> Saving…
+              </span>
+            ) : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal styles ─────────────────────────────────────────────────────────────
+const m: Record<string, React.CSSProperties> = {
+  backdrop:    { position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" },
+  modal:       { background: "white", borderRadius: 18, width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,.2)" },
+  header:      { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid #f0ebe3" },
+  headerTitle: { fontSize: 17, fontWeight: 700, color: "#0f1a10", fontFamily: SERIF },
+  closeBtn:    { width: 30, height: 30, borderRadius: 8, border: "1px solid #e2d9ce", background: "transparent", cursor: "pointer", fontSize: 13, color: "#718096", display: "flex", alignItems: "center", justifyContent: "center" },
+  body:        { padding: "20px 24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 16 },
+  footer:      { padding: "16px 24px", borderTop: "1px solid #f0ebe3", display: "flex", gap: 10, justifyContent: "flex-end" },
+  row:         { display: "flex", flexDirection: "column", gap: 6 },
+  twoCol:      { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 },
+  label:       { fontSize: 11, fontWeight: 700, color: "#a0aec0", textTransform: "uppercase" as const, letterSpacing: "0.5px", fontFamily: SANS },
+  input:       { padding: "10px 13px", border: "1.5px solid #e2d9ce", borderRadius: 9, fontSize: 14, fontFamily: SANS, color: "#1a202c", background: "#fdfaf7", outline: "none", width: "100%" },
+  errorBanner: { background: "#fee2e2", border: "1px solid #fca5a5", color: "#dc2626", fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 8 },
+  cancelBtn:   { padding: "10px 20px", borderRadius: 9, border: "1.5px solid #e2d9ce", background: "transparent", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: SANS, color: "#4a5568" },
+  saveBtn:     { padding: "10px 24px", borderRadius: 9, border: "none", background: GREEN, color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: SANS, boxShadow: "0 4px 14px rgba(26,92,69,.25)", display: "flex", alignItems: "center" },
+  spinner:     { width: 14, height: 14, border: "2px solid rgba(255,255,255,.3)", borderTop: "2px solid white", borderRadius: "50%", animation: "spin .7s linear infinite", display: "inline-block" },
+};
+
+// ─── Dashboard Page ───────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
   const [patient, setPatient]             = useState<Patient | null>(null);
@@ -35,6 +212,8 @@ export default function DashboardPage() {
   const [isOnline, setIsOnline]           = useState(true);
   const [greeting, setGreeting]           = useState("Good day");
   const [sideOpen, setSideOpen]           = useState(false);
+  // ✅ Controls the edit modal
+  const [editOpen, setEditOpen]           = useState(false);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -79,6 +258,12 @@ export default function DashboardPage() {
     }
   };
 
+  // ✅ Called by modal after successful Supabase update — updates UI instantly, no refetch needed
+  const handleProfileSaved = (updated: Patient) => {
+    setPatient(updated);
+    setEditOpen(false);
+  };
+
   if (loading) return (
     <div style={s.loader}>
       <div style={s.loaderSpinner} />
@@ -118,68 +303,44 @@ export default function DashboardPage() {
         .sign-out   { transition: background .2s, color .2s; }
         .sign-out:hover { background: #fee2e2 !important; color: #dc2626 !important; }
 
-        /* ── DESKTOP: sidebar layout ── */
+        /* Modal input focus ring */
+        input:focus, select:focus { border-color: #1a5c45 !important; box-shadow: 0 0 0 3px rgba(26,92,69,.1) !important; background: white !important; }
+
         .dash-sidebar { display: flex; }
         .dash-main    { margin-left: 240px; }
         .bottom-nav   { display: none; }
         .mob-topbar   { display: none; }
 
-        /* ── MOBILE ── */
         @media (max-width: 700px) {
-          /* Hide desktop sidebar */
           .dash-sidebar { display: none !important; }
-
-          /* Show mobile top bar */
           .mob-topbar {
-            display: flex !important;
-            position: fixed; top: 0; left: 0; right: 0; z-index: 60;
+            display: flex !important; position: fixed; top: 0; left: 0; right: 0; z-index: 60;
             height: 56px; background: white; border-bottom: 1px solid #e8e0d5;
-            align-items: center; justify-content: space-between;
-            padding: 0 18px;
+            align-items: center; justify-content: space-between; padding: 0 18px;
           }
-
-          /* Main gets top + bottom padding for bars */
-          .dash-main {
-            margin-left: 0 !important;
-            padding: 72px 16px 84px !important;
-          }
-
-          /* Bottom nav tab bar */
+          .dash-main { margin-left: 0 !important; padding: 72px 16px 84px !important; }
           .bottom-nav {
-            display: flex !important;
-            position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+            display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
             background: white; border-top: 1px solid #e8e0d5;
             padding-bottom: env(safe-area-inset-bottom);
           }
           .bottom-nav button {
-            flex: 1; padding: 10px 4px 8px; background: none; border: none;
-            cursor: pointer; display: flex; flex-direction: column;
-            align-items: center; gap: 3px; -webkit-tap-highlight-color: transparent;
+            flex: 1; padding: 10px 4px 8px; background: none; border: none; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            -webkit-tap-highlight-color: transparent;
           }
-          .bottom-nav .bnav-icon { font-size: 22px; }
+          .bottom-nav .bnav-icon  { font-size: 22px; }
           .bottom-nav .bnav-label { font-size: 10px; font-weight: 600; font-family: 'DM Sans', sans-serif; }
-
-          /* Stats 2-col on mobile */
-          .stats-row { grid-template-columns: repeat(2,1fr) !important; gap: 12px !important; }
-
-          /* Overview grid stacks */
+          .stats-row     { grid-template-columns: repeat(2,1fr) !important; gap: 12px !important; }
           .overview-grid { grid-template-columns: 1fr !important; }
-
-          /* Quick actions 2-col */
-          .actions-grid { grid-template-columns: repeat(2,1fr) !important; gap: 12px !important; }
-
-          /* Records grid 1-col */
-          .records-grid { grid-template-columns: 1fr !important; }
-
-          /* Page header stacks */
-          .page-header { flex-direction: column !important; gap: 14px !important; align-items: flex-start !important; }
+          .actions-grid  { grid-template-columns: repeat(2,1fr) !important; gap: 12px !important; }
+          .records-grid  { grid-template-columns: 1fr !important; }
+          .page-header   { flex-direction: column !important; gap: 14px !important; align-items: flex-start !important; }
           .page-header .book-btn { width: 100% !important; text-align: center; }
-
-          /* Consult card badges wrap */
           .consult-right { flex-wrap: wrap !important; justify-content: flex-end; }
-
-          /* Tab content */
-          .tab-content { padding: 0 !important; }
+          .tab-content   { padding: 0 !important; }
+          /* Modal goes full-screen on mobile */
+          .edit-two-col  { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -188,6 +349,15 @@ export default function DashboardPage() {
         <div style={s.offlineBanner}>
           📴 Offline — showing cached data. Actions will sync when reconnected.
         </div>
+      )}
+
+      {/* ✅ Edit modal — rendered at root so it overlays sidebar + main content */}
+      {editOpen && patient && (
+        <EditProfileModal
+          patient={patient}
+          onClose={() => setEditOpen(false)}
+          onSave={handleProfileSaved}
+        />
       )}
 
       {/* ══════════════ DESKTOP SIDEBAR ══════════════ */}
@@ -246,7 +416,6 @@ export default function DashboardPage() {
           {/* ═══ OVERVIEW ═══ */}
           {activeTab === "overview" && (
             <>
-              {/* Header */}
               <div className="page-header" style={s.pageHeader}>
                 <div>
                   <div style={s.greetingTag}>
@@ -264,10 +433,10 @@ export default function DashboardPage() {
               {/* Stats */}
               <div className="stats-row dash-card" style={s.statsRow}>
                 {[
-                  { icon: "🩺", val: consultations.length, label: "Total",    color: GREEN      },
-                  { icon: "⏳", val: pendingCount,          label: "Pending",  color: "#b45309"  },
-                  { icon: "✅", val: completedCount,        label: "Done",     color: "#1e40af"  },
-                  { icon: "📁", val: records.length,        label: "Records",  color: "#7c3aed"  },
+                  { icon: "🩺", val: consultations.length, label: "Total",   color: GREEN     },
+                  { icon: "⏳", val: pendingCount,          label: "Pending", color: "#b45309" },
+                  { icon: "✅", val: completedCount,        label: "Done",    color: "#1e40af" },
+                  { icon: "📁", val: records.length,        label: "Records", color: "#7c3aed" },
                 ].map((st, i) => (
                   <div key={st.label} className="dash-card" style={{ ...s.statCard, animationDelay: `${i*80}ms` }}>
                     <div style={{ ...s.statIcon, background: st.color + "15" }}>{st.icon}</div>
@@ -282,7 +451,8 @@ export default function DashboardPage() {
                 <div className="dash-card" style={s.card}>
                   <div style={s.cardHeader}>
                     <div style={s.cardTitle}>👤 Your Profile</div>
-                    <button style={s.editBtn}>Edit</button>
+                    {/* ✅ This is the only change to the existing JSX — onClick opens modal */}
+                    <button style={s.editBtn} onClick={() => setEditOpen(true)}>Edit</button>
                   </div>
                   {[
                     ["Full Name", patient?.full_name],
@@ -335,7 +505,7 @@ export default function DashboardPage() {
                     { icon: "🤒", label: "Check Symptoms", color: "#1a5c45", onClick: () => router.push("/symptom-checker") },
                     { icon: "💊", label: "Find Medicine",  color: "#1e40af", onClick: () => {} },
                     { icon: "📋", label: "View Records",   color: "#7c3aed", onClick: () => setActiveTab("records") },
-                    { icon: "🚨", label: "Emergency",      color: "#dc2626", onClick: () => {} },
+                    { icon: "🚨", label: "Emergency",      color: "#dc2626", onClick: () => router.push("/emergency") },
                   ].map(a => (
                     <button key={a.label} className="action-btn" style={{ ...s.quickBtn, borderTop: `3px solid ${a.color}` }} onClick={a.onClick}>
                       <span style={{ fontSize: 26 }}>{a.icon}</span>
@@ -357,7 +527,6 @@ export default function DashboardPage() {
                 </div>
                 <button className="action-btn book-btn" style={s.bookBtn} onClick={handleBook}>+ New</button>
               </div>
-
               {consultations.length === 0 ? (
                 <div style={s.emptyFull}>
                   <div style={{ fontSize: 52 }}>🩺</div>
@@ -397,7 +566,6 @@ export default function DashboardPage() {
                   <p style={s.pageSubtitle}>Your health history in one place</p>
                 </div>
               </div>
-
               {records.length === 0 ? (
                 <div style={s.emptyFull}>
                   <div style={{ fontSize: 52 }}>📁</div>
@@ -425,39 +593,23 @@ export default function DashboardPage() {
       {/* ══════════════ MOBILE BOTTOM NAV ══════════════ */}
       <nav className="bottom-nav">
         {tabs.map(item => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            style={{ color: activeTab === item.id ? GREEN : "#a0aec0" }}
-          >
+          <button key={item.id} onClick={() => setActiveTab(item.id)} style={{ color: activeTab === item.id ? GREEN : "#a0aec0" }}>
             <span className="bnav-icon">{item.icon}</span>
-            <span className="bnav-label" style={{ fontWeight: activeTab === item.id ? 700 : 500 }}>
-              {item.label}
-            </span>
+            <span className="bnav-label" style={{ fontWeight: activeTab === item.id ? 700 : 500 }}>{item.label}</span>
           </button>
         ))}
       </nav>
-
     </div>
   );
 }
 
-// ─── STYLES ──────────────────────────────────────────────────────────────────
-const GREEN = "#1a5c45";
-const CREAM = "#f7f3ee";
-const SERIF = "'Lora', Georgia, serif";
-const SANS  = "'DM Sans', system-ui, sans-serif";
-const CARD  = "#ffffff";
-
+// ─── Dashboard styles ─────────────────────────────────────────────────────────
 const s: Record<string, React.CSSProperties> = {
-  loader:        { minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: CREAM, fontFamily: SANS, gap: 16 },
-  loaderSpinner: { width: 40, height: 40, border: `3px solid ${GREEN}22`, borderTop: `3px solid ${GREEN}`, borderRadius: "50%", animation: "spin .8s linear infinite" },
-  loaderText:    { fontSize: 14, color: "#718096" },
-
-  root:          { display: "flex", minHeight: "100vh", background: CREAM, fontFamily: SANS },
-  offlineBanner: { position: "fixed", top: 0, left: 0, right: 0, zIndex: 999, background: "#fef3c7", borderBottom: "1px solid #f59e0b", color: "#92400e", fontSize: 13, fontWeight: 600, padding: "10px 24px", textAlign: "center" as const },
-
-  // Sidebar
+  loader:         { minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: CREAM, fontFamily: SANS, gap: 16 },
+  loaderSpinner:  { width: 40, height: 40, border: `3px solid ${GREEN}22`, borderTop: `3px solid ${GREEN}`, borderRadius: "50%", animation: "spin .8s linear infinite" },
+  loaderText:     { fontSize: 14, color: "#718096" },
+  root:           { display: "flex", minHeight: "100vh", background: CREAM, fontFamily: SANS },
+  offlineBanner:  { position: "fixed", top: 0, left: 0, right: 0, zIndex: 999, background: "#fef3c7", borderBottom: "1px solid #f59e0b", color: "#92400e", fontSize: 13, fontWeight: 600, padding: "10px 24px", textAlign: "center" as const },
   sidebar:        { width: 240, background: CARD, borderRight: "1px solid #e8e0d5", flexDirection: "column" as const, justifyContent: "space-between", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 50 },
   sideTop:        { padding: "24px 0 16px" },
   sideLogo:       { display: "flex", alignItems: "center", gap: 10, padding: "0 20px", marginBottom: 32 },
@@ -471,57 +623,43 @@ const s: Record<string, React.CSSProperties> = {
   sideProfileName:{ fontSize: 13, fontWeight: 600, color: "#1a202c", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
   sideProfileSub: { fontSize: 11, color: "#a0aec0", marginTop: 1 },
   signOutBtn:     { width: 30, height: 30, borderRadius: 8, border: "1px solid #e2d9ce", background: "transparent", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-
-  // Main
-  main:       { marginLeft: 240, flex: 1, padding: "32px 32px", minHeight: "100vh" },
-  tabContent: { maxWidth: 960, margin: "0 auto" },
-
-  // Page header
-  pageHeader:   { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 },
-  greetingTag:  { display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "#718096", marginBottom: 8, background: "#f0ebe3", padding: "4px 12px", borderRadius: 20 },
-  onlineDot:    { width: 7, height: 7, borderRadius: "50%", flexShrink: 0 },
-  pageH1:       { fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: "#0f1a10", marginBottom: 4 },
-  pageSubtitle: { fontSize: 14, color: "#718096" },
-  bookBtn:      { background: GREEN, color: "white", border: "none", padding: "12px 20px", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: SANS, boxShadow: "0 6px 20px rgba(26,92,69,.2)", whiteSpace: "nowrap" as const },
-
-  // Stats
-  statsRow: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 },
-  statCard: { background: CARD, borderRadius: 14, padding: "18px", boxShadow: "0 2px 12px rgba(0,0,0,.05)", border: "1px solid #f0ebe3" },
-  statIcon: { width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, marginBottom: 10 },
-  statVal:  { fontFamily: SERIF, fontSize: 26, fontWeight: 700, marginBottom: 3 },
-  statLabel:{ fontSize: 11, color: "#718096", fontWeight: 500 },
-
-  // Overview
-  overviewGrid: { display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 18, marginBottom: 18 },
-  card:         { background: CARD, borderRadius: 16, padding: "22px", boxShadow: "0 2px 12px rgba(0,0,0,.05)", border: "1px solid #f0ebe3" },
-  cardHeader:   { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
-  cardTitle:    { fontSize: 15, fontWeight: 700, color: "#1a202c", fontFamily: SERIF },
-  editBtn:      { fontSize: 12, color: GREEN, background: "rgba(26,92,69,.06)", border: "none", padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontFamily: SANS, fontWeight: 600 },
-  viewAllBtn:   { fontSize: 12, color: GREEN, background: "none", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600 },
-  profileRow:   { display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid #f7f3ee" },
-  profileLabel: { fontSize: 11, color: "#a0aec0", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.5px" },
-  profileVal:   { fontSize: 13, color: "#1a202c", fontWeight: 500 },
-  listRow:      { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 8px", borderRadius: 8, cursor: "pointer" },
-  listRowTitle: { fontSize: 13, color: "#1a202c", fontWeight: 500, marginBottom: 3 },
-  listRowDate:  { fontSize: 11, color: "#a0aec0" },
-  statusBadge:  { fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, textTransform: "capitalize" as const, whiteSpace: "nowrap" as const },
-  modeBadge:    { fontSize: 11, color: "#718096", background: "#f0ebe3", padding: "4px 10px", borderRadius: 20, whiteSpace: "nowrap" as const },
-
-  // Empty
-  emptyState:    { textAlign: "center" as const, padding: "32px 20px" },
-  emptyText:     { fontSize: 14, color: "#a0aec0", marginBottom: 14 },
-  emptyBtn:      { background: GREEN, color: "white", border: "none", padding: "9px 18px", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: SANS, fontWeight: 600 },
-  emptyFull:     { textAlign: "center" as const, padding: "64px 20px", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 12 },
-  emptyFullTitle:{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: "#1a202c" },
-  emptyFullSub:  { fontSize: 14, color: "#a0aec0", marginBottom: 8 },
-
-  // Quick actions
-  quickActions: { background: CARD, borderRadius: 16, padding: "22px", boxShadow: "0 2px 12px rgba(0,0,0,.05)", border: "1px solid #f0ebe3" },
-  actionsGrid:  { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 16 },
-  quickBtn:     { background: CARD, border: "1px solid #e8e0d5", borderRadius: 12, padding: "18px 12px", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 8, cursor: "pointer", fontFamily: SANS },
-  quickBtnLabel:{ fontSize: 12, fontWeight: 600, color: "#1a202c", textAlign: "center" as const },
-
-  // Consultations
+  main:           { marginLeft: 240, flex: 1, padding: "32px 32px", minHeight: "100vh" },
+  tabContent:     { maxWidth: 960, margin: "0 auto" },
+  pageHeader:     { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 },
+  greetingTag:    { display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 600, color: "#718096", marginBottom: 8, background: "#f0ebe3", padding: "4px 12px", borderRadius: 20 },
+  onlineDot:      { width: 7, height: 7, borderRadius: "50%", flexShrink: 0 },
+  pageH1:         { fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: "#0f1a10", marginBottom: 4 },
+  pageSubtitle:   { fontSize: 14, color: "#718096" },
+  bookBtn:        { background: GREEN, color: "white", border: "none", padding: "12px 20px", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: SANS, boxShadow: "0 6px 20px rgba(26,92,69,.2)", whiteSpace: "nowrap" as const },
+  statsRow:       { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 },
+  statCard:       { background: CARD, borderRadius: 14, padding: "18px", boxShadow: "0 2px 12px rgba(0,0,0,.05)", border: "1px solid #f0ebe3" },
+  statIcon:       { width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, marginBottom: 10 },
+  statVal:        { fontFamily: SERIF, fontSize: 26, fontWeight: 700, marginBottom: 3 },
+  statLabel:      { fontSize: 11, color: "#718096", fontWeight: 500 },
+  overviewGrid:   { display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 18, marginBottom: 18 },
+  card:           { background: CARD, borderRadius: 16, padding: "22px", boxShadow: "0 2px 12px rgba(0,0,0,.05)", border: "1px solid #f0ebe3" },
+  cardHeader:     { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
+  cardTitle:      { fontSize: 15, fontWeight: 700, color: "#1a202c", fontFamily: SERIF },
+  editBtn:        { fontSize: 12, color: GREEN, background: "rgba(26,92,69,.06)", border: "none", padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontFamily: SANS, fontWeight: 600 },
+  viewAllBtn:     { fontSize: 12, color: GREEN, background: "none", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600 },
+  profileRow:     { display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid #f7f3ee" },
+  profileLabel:   { fontSize: 11, color: "#a0aec0", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.5px" },
+  profileVal:     { fontSize: 13, color: "#1a202c", fontWeight: 500 },
+  listRow:        { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 8px", borderRadius: 8, cursor: "pointer" },
+  listRowTitle:   { fontSize: 13, color: "#1a202c", fontWeight: 500, marginBottom: 3 },
+  listRowDate:    { fontSize: 11, color: "#a0aec0" },
+  statusBadge:    { fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, textTransform: "capitalize" as const, whiteSpace: "nowrap" as const },
+  modeBadge:      { fontSize: 11, color: "#718096", background: "#f0ebe3", padding: "4px 10px", borderRadius: 20, whiteSpace: "nowrap" as const },
+  emptyState:     { textAlign: "center" as const, padding: "32px 20px" },
+  emptyText:      { fontSize: 14, color: "#a0aec0", marginBottom: 14 },
+  emptyBtn:       { background: GREEN, color: "white", border: "none", padding: "9px 18px", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: SANS, fontWeight: 600 },
+  emptyFull:      { textAlign: "center" as const, padding: "64px 20px", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 12 },
+  emptyFullTitle: { fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: "#1a202c" },
+  emptyFullSub:   { fontSize: 14, color: "#a0aec0", marginBottom: 8 },
+  quickActions:   { background: CARD, borderRadius: 16, padding: "22px", boxShadow: "0 2px 12px rgba(0,0,0,.05)", border: "1px solid #f0ebe3" },
+  actionsGrid:    { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: 16 },
+  quickBtn:       { background: CARD, border: "1px solid #e8e0d5", borderRadius: 12, padding: "18px 12px", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 8, cursor: "pointer", fontFamily: SANS },
+  quickBtnLabel:  { fontSize: 12, fontWeight: 600, color: "#1a202c", textAlign: "center" as const },
   consultCard:        { background: CARD, borderRadius: 14, padding: "18px 20px", boxShadow: "0 2px 12px rgba(0,0,0,.05)", border: "1px solid #f0ebe3" },
   consultTop:         { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8, gap: 10 },
   consultRight:       { display: "flex", gap: 6, flexShrink: 0 },
@@ -529,11 +667,9 @@ const s: Record<string, React.CSSProperties> = {
   consultDate:        { fontSize: 12, color: "#a0aec0" },
   consultPrescription:{ fontSize: 13, color: "#1e40af", background: "#dbeafe", padding: "8px 12px", borderRadius: 8, marginTop: 8 },
   consultNotes:       { fontSize: 13, color: "#4a5568", background: "#f7f3ee", padding: "8px 12px", borderRadius: 8, marginTop: 8 },
-
-  // Records
-  recordsGrid:   { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 },
-  recordCard:    { background: CARD, borderRadius: 14, padding: "20px", boxShadow: "0 2px 12px rgba(0,0,0,.05)", border: "1px solid #f0ebe3" },
-  recordType:    { fontFamily: SERIF, fontSize: 14, fontWeight: 700, color: "#1a202c", marginBottom: 7, textTransform: "capitalize" as const },
-  recordContent: { fontSize: 13, color: "#718096", lineHeight: 1.6, marginBottom: 10 },
-  recordDate:    { fontSize: 11, color: "#a0aec0", fontWeight: 500 },
+  recordsGrid:    { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 },
+  recordCard:     { background: CARD, borderRadius: 14, padding: "20px", boxShadow: "0 2px 12px rgba(0,0,0,.05)", border: "1px solid #f0ebe3" },
+  recordType:     { fontFamily: SERIF, fontSize: 14, fontWeight: 700, color: "#1a202c", marginBottom: 7, textTransform: "capitalize" as const },
+  recordContent:  { fontSize: 13, color: "#718096", lineHeight: 1.6, marginBottom: 10 },
+  recordDate:     { fontSize: 11, color: "#a0aec0", fontWeight: 500 },
 };
