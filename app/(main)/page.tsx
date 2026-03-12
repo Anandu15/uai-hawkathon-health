@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from '@/lib/supabase'
+import { useRouter } from "next/navigation";
+
 // ─── tiny hook: mount animation ───────────────────────────────────────────────
 function useMounted() {
   const [m, setM] = useState(false);
@@ -12,6 +13,7 @@ function useMounted() {
 export default function TeleHealthLanding() {
   const mounted = useMounted();
   const [activeStep, setActiveStep] = useState(0);
+  const router = useRouter();
 
   useEffect(() => {
     const t = setInterval(() => setActiveStep(p => (p + 1) % 3), 2800);
@@ -83,8 +85,8 @@ export default function TeleHealthLanding() {
             <a href="#about" className="nav-link">About</a>
           </div>
           <div style={s.navRight}>
-            <button style={s.navSignIn}>Sign In</button>
-            <button style={s.navCta}>Get Started Free</button>
+            <button style={s.navSignIn} onClick={() => router.push("/auth")}>Sign In</button>
+            <button style={s.navCta} onClick={() => router.push("/auth")}>Get Started Free</button>
           </div>
         </div>
       </nav>
@@ -118,7 +120,7 @@ export default function TeleHealthLanding() {
             </p>
 
             <div style={s.heroBtns}>
-              <button style={s.btnPrimary}>🩺 Start Free Consultation</button>
+              <button style={s.btnPrimary} onClick={() => router.push("/auth")}>🩺 Start Free Consultation</button>
               <button style={s.btnOutline}>▶ Watch Demo</button>
             </div>
 
@@ -154,7 +156,7 @@ export default function TeleHealthLanding() {
                   </div>
                 ))}
               </div>
-              <button style={s.fcBtn}>Book Consultation →</button>
+              <button style={s.fcBtn} onClick={() => router.push("/auth")}>Book Consultation →</button>
             </div>
 
             {/* mini floating stat */}
@@ -317,7 +319,7 @@ export default function TeleHealthLanding() {
             Click the chat button in the corner to speak with our AI health assistant — or book a real doctor in under a minute.
           </p>
           <div style={s.ctaBtns}>
-            <button style={s.ctaBtnPrimary}>🩺 Open Health Chat</button>
+            <button style={s.ctaBtnPrimary} onClick={() => router.push("/auth")}>🩺 Open Health Chat</button>
             <button style={s.ctaBtnOutline}>Learn more →</button>
           </div>
           <div style={s.ctaNote}>↙ Chat is already open in the corner</div>
