@@ -67,6 +67,9 @@ Always detect the language the user is writing in and respond in that SAME langu
 "💙 Remember — this analysis is for informational purposes only and does not replace professional medical advice. Please consult your doctor for a proper diagnosis."`;
 
 export async function POST(req: Request) {
+  console.log("🔥 MEDICAL ROUTE HIT");
+  console.log("Content-Type:", req.headers.get("content-type"));
+
   try {
     const formData = await req.formData();
     const message = formData.get("message") as string;

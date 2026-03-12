@@ -332,7 +332,7 @@ export default function DashboardPage() {
                 <div style={s.cardTitle}>⚡ Quick Actions</div>
                 <div className="actions-grid" style={s.actionsGrid}>
                   {[
-                    { icon: "🤒", label: "Check Symptoms", color: "#1a5c45", onClick: () => {} },
+                    { icon: "🤒", label: "Check Symptoms", color: "#1a5c45", onClick: () => router.push("/symptom-checker") },
                     { icon: "💊", label: "Find Medicine",  color: "#1e40af", onClick: () => {} },
                     { icon: "📋", label: "View Records",   color: "#7c3aed", onClick: () => setActiveTab("records") },
                     { icon: "🚨", label: "Emergency",      color: "#dc2626", onClick: () => {} },
