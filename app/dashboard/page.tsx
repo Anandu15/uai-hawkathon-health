@@ -1,5 +1,5 @@
 "use client";
-
+import ChatInbox from "@/app/components/ChatInbox";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
@@ -20,7 +20,6 @@ type MedicalRecord = {
 const statusColor: Record<string, string> = { pending: "#b45309", active: "#1a5c45", completed: "#1e40af", cancelled: "#dc2626" };
 const statusBg:    Record<string, string> = { pending: "#fef3c7", active: "#d1fae5", completed: "#dbeafe",  cancelled: "#fee2e2"  };
 const recordIcon:  Record<string, string> = { blood_test: "🩸", prescription: "💊", scan: "🔬", note: "📝" };
-
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -74,7 +73,6 @@ function EditProfileModal({
     onSave(form);
   };
 
-  // Close on backdrop click
   const onBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -82,13 +80,11 @@ function EditProfileModal({
   return (
     <div style={m.backdrop} onClick={onBackdrop}>
       <div style={m.modal}>
-        {/* Header */}
         <div style={m.header}>
           <div style={m.headerTitle}>Edit Profile</div>
           <button style={m.closeBtn} onClick={onClose}>✕</button>
         </div>
 
-        {/* Fields */}
         <div style={m.body}>
           {error && <div style={m.errorBanner}>{error}</div>}
 
@@ -167,7 +163,6 @@ function EditProfileModal({
           </div>
         </div>
 
-        {/* Footer */}
         <div style={m.footer}>
           <button style={m.cancelBtn} onClick={onClose} disabled={saving}>Cancel</button>
           <button style={{ ...m.saveBtn, opacity: saving ? 0.7 : 1 }} onClick={handleSave} disabled={saving}>
@@ -209,14 +204,12 @@ export default function DashboardPage() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [records, setRecords]             = useState<MedicalRecord[]>([]);
   const [loading, setLoading]             = useState(true);
-  const [activeTab, setActiveTab]         = useState<"overview" | "consultations" | "records">("overview");
+  const [activeTab, setActiveTab]         = useState<"overview" | "consultations" | "records" | "messages">("overview");
   const [isOnline, setIsOnline]           = useState(true);
   const [greeting, setGreeting]           = useState("Good day");
   const [sideOpen, setSideOpen]           = useState(false);
-  // ✅ Controls the edit modal
   const [editOpen, setEditOpen]           = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -224,6 +217,23 @@ export default function DashboardPage() {
     window.addEventListener("online", on); window.addEventListener("offline", off);
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, []);
+
+  // ✅ FIX 3: Ping every 15s (was 30s) — gives 6× safety margin under the 90s threshold
+  useEffect(() => {
+    if (!patient) return;
+
+    const ping = async () => {
+      await supabase
+        .from("patients")
+        .update({ last_seen: new Date().toISOString() })
+        .eq("id", patient.id);
+    };
+
+    ping(); // ping immediately on load
+    const interval = setInterval(ping, 15000); // ✅ 15s instead of 30s
+
+    return () => clearInterval(interval);
+  }, [patient]);
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -261,29 +271,28 @@ export default function DashboardPage() {
     }
   };
 
-  // ✅ Called by modal after successful Supabase update — updates UI instantly, no refetch needed
-const handleDeleteAccount = async () => {
-  if (!patient) return;
-  setLoading(true);
+  const handleDeleteAccount = async () => {
+    if (!patient) return;
+    setLoading(true);
 
-  const res = await fetch("/api/delete-account", {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId: patient.id }),
-  });
+    const res = await fetch("/api/delete-account", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: patient.id }),
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (!res.ok) {
-    alert(data.error ?? "Failed to delete account");
-    setLoading(false);
-    return;
-  }
+    if (!res.ok) {
+      alert(data.error ?? "Failed to delete account");
+      setLoading(false);
+      return;
+    }
 
-  // Auth user is gone — sign out locally and redirect
-  await supabase.auth.signOut();
-  router.replace("/auth");
-};
+    await supabase.auth.signOut();
+    router.replace("/auth");
+  };
+
   if (loading) return (
     <div style={s.loader}>
       <div style={s.loaderSpinner} />
@@ -291,7 +300,7 @@ const handleDeleteAccount = async () => {
     </div>
   );
 
-  const firstName    = patient?.full_name?.split(" ")[0] ?? "there";
+  const firstName      = patient?.full_name?.split(" ")[0] ?? "there";
   const pendingCount   = consultations.filter(c => c.status === "pending").length;
   const completedCount = consultations.filter(c => c.status === "completed").length;
 
@@ -299,6 +308,7 @@ const handleDeleteAccount = async () => {
     { id: "overview",      icon: "🏠", label: "Home"     },
     { id: "consultations", icon: "🩺", label: "Consults" },
     { id: "records",       icon: "📁", label: "Records"  },
+    { id: "messages",      icon: "💬", label: "Messages" },
   ] as const;
 
   return (
@@ -323,7 +333,6 @@ const handleDeleteAccount = async () => {
         .sign-out   { transition: background .2s, color .2s; }
         .sign-out:hover { background: #fee2e2 !important; color: #dc2626 !important; }
 
-        /* Modal input focus ring */
         input:focus, select:focus { border-color: #1a5c45 !important; box-shadow: 0 0 0 3px rgba(26,92,69,.1) !important; background: white !important; }
 
         .dash-sidebar { display: flex; }
@@ -359,7 +368,6 @@ const handleDeleteAccount = async () => {
           .page-header .book-btn { width: 100% !important; text-align: center; }
           .consult-right { flex-wrap: wrap !important; justify-content: flex-end; }
           .tab-content   { padding: 0 !important; }
-          /* Modal goes full-screen on mobile */
           .edit-two-col  { grid-template-columns: 1fr !important; }
         }
       `}</style>
@@ -370,60 +378,41 @@ const handleDeleteAccount = async () => {
           📴 Offline — showing cached data. Actions will sync when reconnected.
         </div>
       )}
-{/* ✅ Delete Account Modal */}
-{deleteConfirm && patient && (
-  <div style={m.backdrop} onClick={() => setDeleteConfirm(false)}>
-    <div
-      style={{ ...m.modal, maxWidth: 380 }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div style={m.header}>
-        <div style={{ ...m.headerTitle, color: "#dc2626" }}>
-          ⚠️ Delete Account
+
+      {/* Delete Account Modal */}
+      {deleteConfirm && patient && (
+        <div style={m.backdrop} onClick={() => setDeleteConfirm(false)}>
+          <div style={{ ...m.modal, maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+            <div style={m.header}>
+              <div style={{ ...m.headerTitle, color: "#dc2626" }}>⚠️ Delete Account</div>
+              <button style={m.closeBtn} onClick={() => setDeleteConfirm(false)}>✕</button>
+            </div>
+            <div style={{ padding: "20px 24px", fontSize: 14, color: "#4a5568", lineHeight: 1.6 }}>
+              This will permanently delete your account and all your data. This action cannot be undone.
+            </div>
+            <div style={m.footer}>
+              <button style={m.cancelBtn} onClick={() => setDeleteConfirm(false)}>Cancel</button>
+              <button
+                style={{ ...m.saveBtn, background: "#dc2626", boxShadow: "0 4px 14px rgba(220,38,38,.25)" }}
+                onClick={handleDeleteAccount}
+                disabled={loading}
+              >
+                {loading ? "Deleting…" : "Yes, Delete Everything"}
+              </button>
+            </div>
+          </div>
         </div>
-        <button
-          style={m.closeBtn}
-          onClick={() => setDeleteConfirm(false)}
-        >
-          ✕
-        </button>
-      </div>
+      )}
 
-      <div
-        style={{
-          padding: "20px 24px",
-          fontSize: 14,
-          color: "#4a5568",
-          lineHeight: 1.6,
-        }}
-      >
-        This will permanently delete your account and all your data.
-        This action cannot be undone.
-      </div>
+      {/* Edit Profile Modal */}
+      {editOpen && patient && (
+        <EditProfileModal
+          patient={patient}
+          onClose={() => setEditOpen(false)}
+          onSave={updated => { setPatient(updated); setEditOpen(false); }}
+        />
+      )}
 
-      <div style={m.footer}>
-        <button
-          style={m.cancelBtn}
-          onClick={() => setDeleteConfirm(false)}
-        >
-          Cancel
-        </button>
-
-        <button
-          style={{
-            ...m.saveBtn,
-            background: "#dc2626",
-            boxShadow: "0 4px 14px rgba(220,38,38,.25)",
-          }}
-          onClick={handleDeleteAccount}
-          disabled={loading}
-        >
-          {loading ? "Deleting…" : "Yes, Delete Everything"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
       {/* ══════════════ DESKTOP SIDEBAR ══════════════ */}
       <aside className="dash-sidebar" style={s.sidebar}>
         <div style={s.sideTop}>
@@ -441,7 +430,7 @@ const handleDeleteAccount = async () => {
                 borderLeft: activeTab === item.id ? `3px solid ${GREEN}` : "3px solid transparent",
               }} onClick={() => setActiveTab(item.id)}>
                 <span style={{ fontSize: 18 }}>{item.icon}</span>
-                {item.label === "Home" ? "Overview" : item.label === "Consults" ? "Consultations" : "Records"}
+                {item.label === "Home" ? "Overview" : item.label === "Consults" ? "Consultations" : item.label === "Records" ? "Records" : "Messages"}
               </button>
             ))}
           </nav>
@@ -454,11 +443,11 @@ const handleDeleteAccount = async () => {
           </div>
           <button className="sign-out" style={s.signOutBtn} onClick={handleSignOut} title="Sign out">↩</button>
           <button
-  className="sign-out"
-  style={{ ...s.signOutBtn, borderColor: "#fca5a5", color: "#dc2626" }}
-  onClick={() => setDeleteConfirm(true)}
-  title="Delete account"
->🗑</button>
+            className="sign-out"
+            style={{ ...s.signOutBtn, borderColor: "#fca5a5", color: "#dc2626" }}
+            onClick={() => setDeleteConfirm(true)}
+            title="Delete account"
+          >🗑</button>
         </div>
       </aside>
 
@@ -521,7 +510,6 @@ const handleDeleteAccount = async () => {
                 <div className="dash-card" style={s.card}>
                   <div style={s.cardHeader}>
                     <div style={s.cardTitle}>👤 Your Profile</div>
-                    {/* ✅ This is the only change to the existing JSX — onClick opens modal */}
                     <button style={s.editBtn} onClick={() => setEditOpen(true)}>Edit</button>
                   </div>
                   {[
@@ -573,7 +561,7 @@ const handleDeleteAccount = async () => {
                 <div className="actions-grid" style={s.actionsGrid}>
                   {[
                     { icon: "🤒", label: "Check Symptoms", color: "#1a5c45", onClick: () => router.push("/symptom-checker") },
-                    { icon: "💊", label: "Find Medicine",  color: "#1e40af", onClick: () => router.push("/find-medicine")},
+                    { icon: "💊", label: "Find Medicine",  color: "#1e40af", onClick: () => router.push("/find-medicine") },
                     { icon: "📋", label: "View Records",   color: "#7c3aed", onClick: () => setActiveTab("records") },
                     { icon: "🚨", label: "Emergency",      color: "#dc2626", onClick: () => router.push("/emergency") },
                   ].map(a => (
@@ -655,6 +643,14 @@ const handleDeleteAccount = async () => {
                 </div>
               )}
             </>
+          )}
+
+          {activeTab === "messages" && patient && (
+            <ChatInbox
+              currentUserId={patient.id}
+              currentUserType="patient"
+              accentColor="#1a5c45"
+            />
           )}
 
         </div>

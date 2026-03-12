@@ -288,7 +288,7 @@ export default function ChatWidget() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  chatWindow: { position: "fixed", bottom: "90px", left: "24px", width: "380px", height: "600px", background: "#0f1623", borderRadius: "20px", display: "flex", flexDirection: "column", boxShadow: "0 25px 60px rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.08)", zIndex: 9999, animation: "fadeUp 0.3s ease", overflow: "hidden" },
+  chatWindow: { position: "fixed", bottom: "90px", right: "24px", width: "380px", height: "600px", background: "#0f1623", borderRadius: "20px", display: "flex", flexDirection: "column", boxShadow: "0 25px 60px rgba(0,0,0,0.7)", border: "1px solid rgba(255,255,255,0.08)", zIndex: 9999, animation: "fadeUp 0.3s ease", overflow: "hidden" },
   chatHeader: { padding: "14px 16px", background: "linear-gradient(135deg, rgba(0,200,150,0.25), rgba(0,120,255,0.25))", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "space-between" },
   chatLogo: { fontSize: "22px", width: "36px", height: "36px", background: "rgba(255,255,255,0.1)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center" },
   chatTitle: { color: "white", fontWeight: "700", fontSize: "14px" },
@@ -317,6 +317,6 @@ const s: Record<string, React.CSSProperties> = {
   para: { margin: "2px 0", color: "#d0d8e8", fontSize: "13px" },
   li: { margin: "2px 0 2px 14px", color: "#d0d8e8", fontSize: "13px" },
   bold: { color: "white", fontWeight: "700" },
-  fab: { position: "fixed", bottom: "24px", left: "24px", width: "60px", height: "60px", borderRadius: "50%", background: "linear-gradient(135deg, #00c896, #0078ff)", border: "none", fontSize: "26px", cursor: "pointer", boxShadow: "0 8px 30px rgba(0,200,150,0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" },
+  fab: { position: "fixed", bottom: "24px", right: "24px", width: "60px", height: "60px", borderRadius: "50%", background: "linear-gradient(135deg, #00c896, #0078ff)", border: "none", fontSize: "26px", cursor: "pointer", boxShadow: "0 8px 30px rgba(0,200,150,0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" },
   fabPulse: { position: "absolute", inset: 0, borderRadius: "50%", background: "rgba(0,229,160,0.4)", animation: "pulse 2s infinite", pointerEvents: "none" },
 };

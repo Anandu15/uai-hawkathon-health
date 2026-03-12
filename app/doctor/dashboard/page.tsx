@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
+import ChatInbox from "@/app/components/ChatInbox";
 
 type Doctor = {
   id: string;
@@ -35,6 +36,7 @@ type PatientInfo = {
   full_name: string;
   age: number | null;
   village: string | null;
+  last_seen: string | null;
 };
 
 const statusColor: Record<string, string> = {
@@ -43,6 +45,13 @@ const statusColor: Record<string, string> = {
 const statusBg: Record<string, string> = {
   pending: "#fef3c7", active: "#d1fae5", completed: "#dbeafe", cancelled: "#fee2e2",
 };
+
+// ✅ FIX 1: Widened from 60s → 90s to tolerate ngrok/network latency
+function isOnlineNow(last_seen: string | null): boolean {
+  if (!last_seen) return false;
+  const diff = Date.now() - new Date(last_seen).getTime();
+  return diff < 90000;
+}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -288,7 +297,7 @@ export default function DoctorDashboardPage() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [patients, setPatients]           = useState<Record<string, PatientInfo>>({});
   const [loading, setLoading]             = useState(true);
-  const [activeTab, setActiveTab]         = useState<"overview" | "consultations" | "patients">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "consultations" | "patients" | "messages">("overview");
   const [isOnline, setIsOnline]           = useState(true);
   const [greeting, setGreeting]           = useState("Good day");
   const [editOpen, setEditOpen]           = useState(false);
@@ -301,6 +310,30 @@ export default function DoctorDashboardPage() {
     window.addEventListener("online", on); window.addEventListener("offline", off);
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, []);
+
+  // ✅ FIX 2: Call refresh() immediately on mount + remove `consultations` from deps
+  //           so the interval never resets when consultation state changes.
+  //           Patient IDs are captured once when doctor loads; the list is stable.
+  useEffect(() => {
+    if (!doctor) return;
+
+    const patientIds = [...new Set(consultations.map(c => c.patient_id))];
+    if (!patientIds.length) return;
+
+    const refresh = async () => {
+      const { data: pats } = await supabase
+        .from("patients").select("id, full_name, age, village, last_seen").in("id", patientIds);
+      if (pats) {
+        const map: Record<string, PatientInfo> = {};
+        pats.forEach(p => { map[p.id] = p; });
+        setPatients(map);
+      }
+    };
+
+    refresh(); // ✅ show status immediately on load — don't wait 15s
+    const interval = setInterval(refresh, 15000); // ✅ 15s interval, well within 90s threshold
+    return () => clearInterval(interval);
+  }, [doctor]); // ✅ only re-run when doctor changes, NOT on every consultation update
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -323,10 +356,9 @@ export default function DoctorDashboardPage() {
 
       if (cons && cons.length > 0) {
         setConsultations(cons);
-        // Fetch patient info for all consultations
         const patientIds = [...new Set(cons.map(c => c.patient_id))];
         const { data: pats } = await supabase
-          .from("patients").select("id, full_name, age, village").in("id", patientIds);
+          .from("patients").select("id, full_name, age, village, last_seen").in("id", patientIds);
         if (pats) {
           const map: Record<string, PatientInfo> = {};
           pats.forEach(p => { map[p.id] = p; });
@@ -371,7 +403,7 @@ export default function DoctorDashboardPage() {
     </div>
   );
 
-  const firstName      = doctor?.full_name?.replace(/^Dr\.?\s*/i, "").split(" ")[0] ?? "Doctor";
+  const firstName      = doctor?.full_name ?? "Doctor";
   const pendingCount   = consultations.filter(c => c.status === "pending").length;
   const activeCount    = consultations.filter(c => c.status === "active").length;
   const completedCount = consultations.filter(c => c.status === "completed").length;
@@ -381,6 +413,7 @@ export default function DoctorDashboardPage() {
     { id: "overview",      icon: "🏠", label: "Overview"      },
     { id: "consultations", icon: "🩺", label: "Consultations" },
     { id: "patients",      icon: "👥", label: "Patients"      },
+    { id: "messages",      icon: "💬", label: "Messages"      },
   ] as const;
 
   return (
@@ -586,10 +619,10 @@ export default function DoctorDashboardPage() {
               {/* Stats */}
               <div className="stats-row dash-card" style={s.statsRow}>
                 {[
-                  { icon: "🩺", val: consultations.length, label: "Total",     color: BLUE      },
-                  { icon: "⏳", val: pendingCount,          label: "Pending",   color: "#b45309" },
-                  { icon: "🟢", val: activeCount,           label: "Active",    color: "#1a5c45" },
-                  { icon: "👥", val: uniquePatients,         label: "Patients",  color: "#7c3aed" },
+                  { icon: "🩺", val: consultations.length, label: "Total",    color: BLUE      },
+                  { icon: "⏳", val: pendingCount,          label: "Pending",  color: "#b45309" },
+                  { icon: "🟢", val: activeCount,           label: "Active",   color: "#1a5c45" },
+                  { icon: "👥", val: uniquePatients,         label: "Patients", color: "#7c3aed" },
                 ].map((st, i) => (
                   <div key={st.label} className="dash-card" style={{ ...s.statCard, animationDelay: `${i*80}ms` }}>
                     <div style={{ ...s.statIcon, background: st.color + "15" }}>{st.icon}</div>
@@ -607,14 +640,14 @@ export default function DoctorDashboardPage() {
                     <button style={s.editBtn} onClick={() => setEditOpen(true)}>Edit</button>
                   </div>
                   {[
-                    ["Full Name",    doctor?.full_name],
+                    ["Full Name",      doctor?.full_name],
                     ["Specialization", doctor?.specialization],
-                    ["License No.",  doctor?.license_number],
-                    ["Experience",   doctor?.experience_years ? `${doctor.experience_years} yrs` : null],
-                    ["Fee",          doctor?.consultation_fee ? `₹${doctor.consultation_fee}` : null],
-                    ["Phone",        doctor?.phone],
-                    ["Language",     doctor?.language],
-                    ["Verified",     doctor?.verified ? "✅ Verified" : "⏳ Pending"],
+                    ["License No.",    doctor?.license_number],
+                    ["Experience",     doctor?.experience_years ? `${doctor.experience_years} yrs` : null],
+                    ["Fee",            doctor?.consultation_fee ? `₹${doctor.consultation_fee}` : null],
+                    ["Phone",          doctor?.phone],
+                    ["Language",       doctor?.language],
+                    ["Verified",       doctor?.verified ? "✅ Verified" : "⏳ Pending"],
                   ].map(([label, val]) => (
                     <div key={label as string} style={s.profileRow}>
                       <span style={s.profileLabel}>{label}</span>
@@ -638,7 +671,17 @@ export default function DoctorDashboardPage() {
                     consultations.slice(0, 4).map(c => (
                       <div key={c.id} className="row-item" style={s.listRow} onClick={() => setSelectedConsult(c)}>
                         <div style={{ flex: 1 }}>
-                          <div style={s.listRowTitle}>{patients[c.patient_id]?.full_name ?? "Patient"}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={s.listRowTitle}>{patients[c.patient_id]?.full_name ?? "Patient"}</div>
+                            {patients[c.patient_id] && (
+                              <span style={{
+                                width: 7, height: 7, borderRadius: "50%",
+                                background: isOnlineNow(patients[c.patient_id].last_seen) ? "#22c55e" : "#d1d5db",
+                                display: "inline-block", flexShrink: 0,
+                                animation: isOnlineNow(patients[c.patient_id].last_seen) ? "pulse 2s infinite" : "none",
+                              }} />
+                            )}
+                          </div>
                           <div style={s.listRowSub}>{c.symptoms?.slice(0, 38) ?? "General consultation"}</div>
                           <div style={s.listRowDate}>{formatDate(c.created_at)}</div>
                         </div>
@@ -656,10 +699,10 @@ export default function DoctorDashboardPage() {
                 <div style={s.cardTitle}>⚡ Quick Actions</div>
                 <div className="actions-grid" style={s.actionsGrid}>
                   {[
-                    { icon: "⏳", label: "Pending Queue",    color: "#b45309", onClick: () => { setActiveTab("consultations"); } },
-                    { icon: "👥", label: "All Patients",      color: BLUE,      onClick: () => setActiveTab("patients") },
-                    { icon: "✅", label: "Mark Available",    color: "#1a5c45", onClick: handleToggleAvailability },
-                    { icon: "🏥", label: "Patient Portal",    color: "#7c3aed", onClick: () => router.push("/auth") },
+                    { icon: "⏳", label: "Pending Queue", color: "#b45309", onClick: () => { setActiveTab("consultations"); } },
+                    { icon: "👥", label: "All Patients",   color: BLUE,      onClick: () => setActiveTab("patients") },
+                    { icon: "✅", label: "Mark Available", color: "#1a5c45", onClick: handleToggleAvailability },
+                    { icon: "🏥", label: "Patient Portal", color: "#7c3aed", onClick: () => router.push("/auth") },
                   ].map(a => (
                     <button key={a.label} className="action-btn" style={{ ...s.quickBtn, borderTop: `3px solid ${a.color}` }} onClick={a.onClick}>
                       <span style={{ fontSize: 26 }}>{a.icon}</span>
@@ -679,7 +722,6 @@ export default function DoctorDashboardPage() {
                   <h1 style={s.pageH1}>Consultations</h1>
                   <p style={s.pageSubtitle}>Tap any consultation to review and update</p>
                 </div>
-                {/* Filter pills */}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
                   {pendingCount > 0 && (
                     <span style={{ ...s.statusBadge, background: "#fef3c7", color: "#b45309", fontSize: 12, padding: "6px 12px" }}>
@@ -777,6 +819,14 @@ export default function DoctorDashboardPage() {
                 </div>
               )}
             </>
+          )}
+
+          {activeTab === "messages" && doctor && (
+            <ChatInbox
+              currentUserId={doctor.id}
+              currentUserType="doctor"
+              accentColor="#1a4a7a"
+            />
           )}
 
         </div>
