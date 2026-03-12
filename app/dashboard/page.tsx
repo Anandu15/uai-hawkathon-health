@@ -21,6 +21,7 @@ const statusColor: Record<string, string> = { pending: "#b45309", active: "#1a5c
 const statusBg:    Record<string, string> = { pending: "#fef3c7", active: "#d1fae5", completed: "#dbeafe",  cancelled: "#fee2e2"  };
 const recordIcon:  Record<string, string> = { blood_test: "🩸", prescription: "💊", scan: "🔬", note: "📝" };
 
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
@@ -214,6 +215,8 @@ export default function DashboardPage() {
   const [sideOpen, setSideOpen]           = useState(false);
   // ✅ Controls the edit modal
   const [editOpen, setEditOpen]           = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -259,11 +262,28 @@ export default function DashboardPage() {
   };
 
   // ✅ Called by modal after successful Supabase update — updates UI instantly, no refetch needed
-  const handleProfileSaved = (updated: Patient) => {
-    setPatient(updated);
-    setEditOpen(false);
-  };
+const handleDeleteAccount = async () => {
+  if (!patient) return;
+  setLoading(true);
 
+  const res = await fetch("/api/delete-account", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: patient.id }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error ?? "Failed to delete account");
+    setLoading(false);
+    return;
+  }
+
+  // Auth user is gone — sign out locally and redirect
+  await supabase.auth.signOut();
+  router.replace("/auth");
+};
   if (loading) return (
     <div style={s.loader}>
       <div style={s.loaderSpinner} />
@@ -350,16 +370,60 @@ export default function DashboardPage() {
           📴 Offline — showing cached data. Actions will sync when reconnected.
         </div>
       )}
+{/* ✅ Delete Account Modal */}
+{deleteConfirm && patient && (
+  <div style={m.backdrop} onClick={() => setDeleteConfirm(false)}>
+    <div
+      style={{ ...m.modal, maxWidth: 380 }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div style={m.header}>
+        <div style={{ ...m.headerTitle, color: "#dc2626" }}>
+          ⚠️ Delete Account
+        </div>
+        <button
+          style={m.closeBtn}
+          onClick={() => setDeleteConfirm(false)}
+        >
+          ✕
+        </button>
+      </div>
 
-      {/* ✅ Edit modal — rendered at root so it overlays sidebar + main content */}
-      {editOpen && patient && (
-        <EditProfileModal
-          patient={patient}
-          onClose={() => setEditOpen(false)}
-          onSave={handleProfileSaved}
-        />
-      )}
+      <div
+        style={{
+          padding: "20px 24px",
+          fontSize: 14,
+          color: "#4a5568",
+          lineHeight: 1.6,
+        }}
+      >
+        This will permanently delete your account and all your data.
+        This action cannot be undone.
+      </div>
 
+      <div style={m.footer}>
+        <button
+          style={m.cancelBtn}
+          onClick={() => setDeleteConfirm(false)}
+        >
+          Cancel
+        </button>
+
+        <button
+          style={{
+            ...m.saveBtn,
+            background: "#dc2626",
+            boxShadow: "0 4px 14px rgba(220,38,38,.25)",
+          }}
+          onClick={handleDeleteAccount}
+          disabled={loading}
+        >
+          {loading ? "Deleting…" : "Yes, Delete Everything"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       {/* ══════════════ DESKTOP SIDEBAR ══════════════ */}
       <aside className="dash-sidebar" style={s.sidebar}>
         <div style={s.sideTop}>
@@ -389,6 +453,12 @@ export default function DashboardPage() {
             <div style={s.sideProfileSub}>{patient?.village ?? "Patient"}</div>
           </div>
           <button className="sign-out" style={s.signOutBtn} onClick={handleSignOut} title="Sign out">↩</button>
+          <button
+  className="sign-out"
+  style={{ ...s.signOutBtn, borderColor: "#fca5a5", color: "#dc2626" }}
+  onClick={() => setDeleteConfirm(true)}
+  title="Delete account"
+>🗑</button>
         </div>
       </aside>
 
@@ -503,7 +573,7 @@ export default function DashboardPage() {
                 <div className="actions-grid" style={s.actionsGrid}>
                   {[
                     { icon: "🤒", label: "Check Symptoms", color: "#1a5c45", onClick: () => router.push("/symptom-checker") },
-                    { icon: "💊", label: "Find Medicine",  color: "#1e40af", onClick: () => {} },
+                    { icon: "💊", label: "Find Medicine",  color: "#1e40af", onClick: () => router.push("/find-medicine")},
                     { icon: "📋", label: "View Records",   color: "#7c3aed", onClick: () => setActiveTab("records") },
                     { icon: "🚨", label: "Emergency",      color: "#dc2626", onClick: () => router.push("/emergency") },
                   ].map(a => (
