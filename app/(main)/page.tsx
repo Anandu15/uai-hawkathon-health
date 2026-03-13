@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
 import ChatWidget from "../components/ChatWidget";
 
+
 function useMounted() {
   const [m, setM] = useState(false);
   useEffect(() => { setM(true); }, []);
@@ -86,7 +87,10 @@ function EmptyCard({ message }: { message: string }) {
 }
 
 // ── Doctor Slideshow (shown to logged-in patients) ────────────────────────
-function DoctorSlideshow({ sessionToken, onBook }: { sessionToken: string; onBook: () => void }) {
+function DoctorSlideshow({ sessionToken, onBook }: { 
+  sessionToken: string; 
+  onBook: (doctorId: string) => void  // was: () => void
+}) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [idx, setIdx]         = useState(0);
   const [status, setStatus]   = useState<"loading" | "ok" | "error" | "empty">("loading");
@@ -187,15 +191,22 @@ function DoctorSlideshow({ sessionToken, onBook }: { sessionToken: string; onBoo
         </div>
       )}
 
-      <button style={S.fcBtn} onClick={onBook}>
-        Book with Dr. {doc.full_name} →
-      </button>
+<button style={S.fcBtn} onClick={() => onBook(doc.id)}>
+  Book with Dr. {doc.full_name} →
+</button>
     </div>
   );
 }
 
 // ── Patient Slideshow (shown to logged-in doctors) ────────────────────────
-function PatientSlideshow({ sessionToken, onView }: { sessionToken: string; onView: () => void }) {
+function PatientSlideshow({ 
+  sessionToken, 
+  onViewPatient  // ← rename to avoid confusion
+}: { 
+  sessionToken: string; 
+  onViewPatient: (patientId: string) => void 
+}) {
+
   const [patients, setPatients] = useState<Patient[]>([]);
   const [idx, setIdx]           = useState(0);
   const [status, setStatus]     = useState<"loading" | "ok" | "error" | "empty">("loading");
@@ -289,9 +300,14 @@ function PatientSlideshow({ sessionToken, onView }: { sessionToken: string; onVi
         </div>
       )}
 
-      <button style={{ ...S.fcBtn, background: "#1e40af" }} onClick={onView}>
-        View {pat.full_name.split(" ")[0]}'s Profile →
-      </button>
+
+<button
+  style={{ ...S.fcBtn, background: "#1e40af" }}
+  onClick={() => onViewPatient(pat.id)}
+>
+  View {pat.full_name.split(" ")[0]}'s Profile →
+</button>
+
     </div>
   );
 }
@@ -375,12 +391,23 @@ export default function TeleHealthLanding() {
   const dashboardPath = userType === "doctor" ? "/doctor/dashboard" : "/dashboard";
   const goAuth = () => router.push(userName ? dashboardPath : "/auth");
 
-  const renderCard = () => {
-    if (!authReady) return <SkeletonCard />;
-    if (userType === "patient") return <DoctorSlideshow  sessionToken={sessionToken} onBook={goAuth} />;
-    if (userType === "doctor")  return <PatientSlideshow sessionToken={sessionToken} onView={() => router.push("/doctor/dashboard")} />;
-    return <DefaultCard onBook={goAuth} />;
-  };
+const renderCard = () => {
+  if (!authReady) return <SkeletonCard />;
+  if (userType === "patient") return (
+  <DoctorSlideshow 
+    sessionToken={sessionToken} 
+    onBook={(doctorId: string) => router.push("/doctor/" + doctorId)} 
+  />
+);
+  if (userType === "doctor") return (
+    <PatientSlideshow 
+      sessionToken={sessionToken} 
+      onViewPatient={(patientId: string) => router.push("/patients/"+ patientId)}
+    />
+  );
+  return <DefaultCard onBook={goAuth} />;
+};
+
 
   return (
     <div style={S.root}>
@@ -503,7 +530,7 @@ export default function TeleHealthLanding() {
                 <button style={S.btnPrimary} onClick={goAuth}>
                   🩺 {!userName ? "Start Free Consultation" : userType === "doctor" ? "Go to Dashboard" : "Book a Doctor"}
                 </button>
-                <button style={S.btnOutline}>▶ Watch Demo</button>
+                
               </div>
               <div className="trust-row" style={S.trustRow}>
                 {["Works offline", "Hindi · English", "Free forever"].map(t => (

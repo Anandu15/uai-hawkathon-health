@@ -245,7 +245,7 @@ export default function SymptomCheckerPage() {
       const rule = SYMPTOM_RULES[sym];
       if (!rule) continue;
       if (rule.severity === "urgent") { worstSeverity = "urgent"; matchedKey = sym; break; }
-      if (rule.severity === "moderate" && worstSeverity !== "urgent") { worstSeverity = "moderate"; matchedKey = sym; }
+      if (rule.severity === "moderate" && worstSeverity !== "moderate") { worstSeverity = "moderate"; matchedKey = sym; }
       if (rule.severity === "mild" && matchedKey === null) { matchedKey = sym; }
     }
 
