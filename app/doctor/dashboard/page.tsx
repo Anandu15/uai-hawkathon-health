@@ -340,35 +340,46 @@ export default function DoctorDashboardPage() {
     setGreeting(h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening");
   }, []);
 
-  useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.replace("/auth/doctor"); return; }
-      const uid = session.user.id;
+useEffect(() => {
+  const init = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { router.replace("/auth/doctor"); return; }
+    const uid = session.user.id;
 
-      const { data: doc } = await supabase.from("doctors").select("*").eq("id", uid).single();
-      if (!doc) { router.replace("/auth/doctor"); return; }
-      setDoctor(doc);
+    const { data: doc } = await supabase.from("doctors").select("*").eq("id", uid).single();
+    if (!doc) { router.replace("/auth/doctor"); return; }
+    setDoctor(doc);
 
+    const loadConsultations = async () => {
       const { data: cons } = await supabase
         .from("consultations").select("*").eq("doctor_id", uid)
         .order("created_at", { ascending: false }).limit(20);
 
       if (cons && cons.length > 0) {
         setConsultations(cons);
-        const patientIds = [...new Set(cons.map(c => c.patient_id))];
-        const { data: pats } = await supabase
-          .from("patients").select("id, full_name, age, village, last_seen").in("id", patientIds);
-        if (pats) {
-          const map: Record<string, PatientInfo> = {};
-          pats.forEach(p => { map[p.id] = p; });
-          setPatients(map);
+        const patientIds = [...new Set(cons.map(c => c.patient_id).filter(Boolean))];
+        if (patientIds.length > 0) {
+          const { data: pats } = await supabase
+            .from("patients").select("id, full_name, age, village, last_seen").in("id", patientIds);
+          if (pats) {
+            const map: Record<string, PatientInfo> = {};
+            pats.forEach(p => { map[p.id] = p; });
+            setPatients(map);
+          }
         }
       }
-      setLoading(false);
     };
-    init();
-  }, [router]);
+
+    await loadConsultations();
+    setLoading(false);
+
+    // ← ADD THIS: poll every 10s for new bookings
+    const poll = setInterval(loadConsultations, 10000);
+    return () => clearInterval(poll);
+  };
+
+  init();
+}, [router]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

@@ -499,15 +499,34 @@ const renderCard = () => {
             </button>
           </div>
         </div>
-        {menuOpen && (
-          <div className="mobile-menu">
-            <a href="#features" className="nav-link" onClick={() => setMenuOpen(false)}>Features</a>
-            <a href="#how"      className="nav-link" onClick={() => setMenuOpen(false)}>How It Works</a>
-            <button className="nav-link" onClick={() => { router.push("/about"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%" }}>About</button>
-            <button className="mob-cta-btn" onClick={() => { goAuth(); setMenuOpen(false); }}>{userName ? "Go to Dashboard →" : "Get Started Free →"}</button>
-            {!userName && <button className="mob-sec-btn" onClick={() => { router.push("/auth"); setMenuOpen(false); }}>Sign In</button>}
-          </div>
-        )}
+{menuOpen && (
+  <div className="mobile-menu">
+    <a href="#features" className="nav-link" onClick={() => setMenuOpen(false)}>Features</a>
+    <a href="#how"      className="nav-link" onClick={() => setMenuOpen(false)}>How It Works</a>
+    <button
+      className="nav-link"
+      onClick={() => { router.push("/about"); setMenuOpen(false); }}
+      style={{
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        textAlign: "left",
+        width: "100%",
+        fontFamily: SANS,
+        fontSize: 15,
+        fontWeight: 500,
+        color: "#4a5568",
+        padding: "16px 24px",
+        borderBottom: "1px solid #f7f3ee",
+        display: "block",
+      }}
+    >
+      About
+    </button>
+    <button className="mob-cta-btn" onClick={() => { goAuth(); setMenuOpen(false); }}>{userName ? "Go to Dashboard →" : "Get Started Free →"}</button>
+    {!userName && <button className="mob-sec-btn" onClick={() => { router.push("/auth"); setMenuOpen(false); }}>Sign In</button>}
+  </div>
+)}
       </nav>
 
       {/* HERO */}
