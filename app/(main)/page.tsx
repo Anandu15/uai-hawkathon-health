@@ -470,7 +470,7 @@ const renderCard = () => {
         <div style={S.navInner}>
           <div style={S.logo}>
             <div style={S.logoMark}>✚</div>
-            <span style={S.logoText}>CareConnect</span>
+            <span style={S.logoText}>TeleCare</span>
           </div>
           <div className="d-flex desktop-only" style={{ gap: 32 }}>
             <a href="#features" className="nav-link" style={{ padding: 0, display: "inline" }}>Features</a>
