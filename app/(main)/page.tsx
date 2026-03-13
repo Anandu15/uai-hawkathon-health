@@ -674,7 +674,7 @@ const renderCard = () => {
         <div className="foot-inner" style={S.footInner}>
           <div style={S.footLogo}>
             <div style={S.logoMark}>✚</div>
-            <span style={{ fontFamily:"'Lora',serif", fontWeight:700, color:"#1a5c45", fontSize:16 }}>CareConnect</span>
+            <span style={{ fontFamily:"'Lora',serif", fontWeight:700, color:"#1a5c45", fontSize:16 }}>TeleCare</span>
           </div>
           <p className="foot-note" style={S.footNote}>For informational purposes only. Not a substitute for professional medical advice.</p>
           <div style={S.footLinks}>

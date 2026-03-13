@@ -88,7 +88,7 @@ const stats = [
 const timeline = [
   { year: "Problem",   icon: "🔍", title: "Staff shortage & distance barriers",   desc: "Only 11 of 23 sanctioned doctors serve 173 villages, forcing patients to travel hours for basic care." },
   { year: "Insight",   icon: "💡", title: "Technology can bridge the gap",         desc: "Telemedicine growing at 31% CAGR in India — the infrastructure exists, the last-mile solution doesn't." },
-  { year: "Solution",  icon: "🛠️", title: "CareConnect is born",                   desc: "A low-bandwidth, offline-first telemedicine platform designed from the ground up for rural India." },
+  { year: "Solution",  icon: "🛠️", title: "TeleCare is born",                   desc: "A low-bandwidth, offline-first telemedicine platform designed from the ground up for rural India." },
   { year: "Impact",    icon: "🚀", title: "Reach every village, every family",     desc: "Remote consultations, digital health records, AI symptom checking — in 20+ languages, even on 2G." },
 ];
 
@@ -224,7 +224,7 @@ export default function AboutPage() {
                 fontSize: 16, color: "rgba(255,255,255,.65)", lineHeight: 1.85, maxWidth: 480,
                 animation: heroLoaded ? "hero-text-in .8s cubic-bezier(.16,1,.3,1) .35s both" : "none",
               }}>
-                CareConnect is a low-bandwidth telemedicine system built for Nabha and its <strong style={{ color: "rgba(255,255,255,.85)" }}>173 surrounding villages</strong> — bringing doctors, digital health records, and medicine availability to every household, even on 2G.
+                TeleCare is a low-bandwidth telemedicine system built for Nabha and its <strong style={{ color: "rgba(255,255,255,.85)" }}>173 surrounding villages</strong> — bringing doctors, digital health records, and medicine availability to every household, even on 2G.
               </p>
 
               {/* Tags */}
@@ -412,7 +412,7 @@ export default function AboutPage() {
             <div style={{ textAlign: "center", marginBottom: 48 }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", color: GREEN, marginBottom: 12 }}>Our Solution</div>
               <h2 style={{ fontFamily: SERIF, fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 700, color: DARK, letterSpacing: "-0.8px" }}>
-                What CareConnect delivers
+                What TeleCare delivers
               </h2>
               <p style={{ fontSize: 15, color: "#4a5568", lineHeight: 1.8, maxWidth: 580, margin: "16px auto 0" }}>
                 A practical, scalable telemedicine platform designed from the ground up for rural India — prioritizing offline access, low bandwidth, and digital literacy.
@@ -482,7 +482,7 @@ export default function AboutPage() {
                     Built for every stakeholder
                   </h2>
                   <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.8, marginBottom: 28 }}>
-                    CareConnect creates measurable value for patients, providers, and the broader healthcare ecosystem in rural Punjab.
+                    TeleCare creates measurable value for patients, providers, and the broader healthcare ecosystem in rural Karjat.
                   </p>
                   <div style={{ width: 48, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${GREEN}, ${AMBER})` }} />
                 </div>
@@ -549,7 +549,7 @@ export default function AboutPage() {
                 </blockquote>
 
                 <p style={{ fontSize: 14, color: "rgba(255,255,255,.5)", maxWidth: 560, margin: "0 auto 36px", lineHeight: 1.8 }}>
-                  CareConnect was built for Hawkathon 2026 in response to the real healthcare crisis facing Nabha's 173 villages. We believe technology, designed responsibly for its context, can bridge even the deepest gaps.
+                  TeleCare was built for Hawkathon 2026 in response to the real healthcare crisis facing Nabha's 173 villages. We believe technology, designed responsibly for its context, can bridge even the deepest gaps.
                 </p>
 
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>

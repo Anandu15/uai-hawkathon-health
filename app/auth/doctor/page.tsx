@@ -219,7 +219,7 @@ export default function DoctorAuthPage() {
         <div style={s.leftInner}>
           <div style={s.leftLogo}>
             <div style={s.logoMark}>✚</div>
-            <span style={s.logoText}>CareConnect</span>
+            <span style={s.logoText}>TeleCare</span>
           </div>
           <div style={s.leftBadge}>Doctor Portal</div>
           <div style={s.leftQuote}>
@@ -256,7 +256,7 @@ export default function DoctorAuthPage() {
         {/* Mobile logo */}
         <div className="mobile-logo" style={{ ...s.mobileLogo, display: "none" }}>
           <div style={s.mobileLogoMark}>✚</div>
-          <span style={s.mobileLogoText}>CareConnect — Doctor Portal</span>
+          <span style={s.mobileLogoText}>TeleCare — Doctor Portal</span>
         </div>
 
         <div className="auth-card card" style={s.card}>
@@ -486,7 +486,7 @@ export default function DoctorAuthPage() {
               </div>
 
               <p style={s.disclaimer}>
-                Your profile will show as <strong>unverified</strong> until the CareConnect team reviews your license. You can still receive and respond to patient requests.
+                Your profile will show as <strong>unverified</strong> until the TeleCare team reviews your license. You can still receive and respond to patient requests.
               </p>
             </div>
           )}
