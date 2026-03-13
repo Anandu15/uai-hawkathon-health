@@ -16,167 +16,24 @@ type Consultation = {
 type MedicalRecord = {
   id: string; record_type: string; content: string | null; created_at: string;
 };
+type AvailDoctor = {
+  id: string; full_name: string; specialization: string | null;
+  consultation_fee: number | null; language: string | null; is_available: boolean | null;
+};
 
 const statusColor: Record<string, string> = { pending: "#b45309", active: "#1a5c45", completed: "#1e40af", cancelled: "#dc2626" };
-const statusBg:    Record<string, string> = { pending: "#fef3c7", active: "#d1fae5", completed: "#dbeafe",  cancelled: "#fee2e2"  };
+const statusBg:    Record<string, string> = { pending: "#fef3c7", active: "#d1fae5", completed: "#dbeafe", cancelled: "#fee2e2" };
 const recordIcon:  Record<string, string> = { blood_test: "🩸", prescription: "💊", scan: "🔬", note: "📝" };
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-// ─── Shared constants (needed by both modal and dashboard styles) ─────────────
 const GREEN = "#1a5c45";
 const SANS  = "'DM Sans', system-ui, sans-serif";
 const SERIF = "'Lora', Georgia, serif";
 const CREAM = "#f7f3ee";
 const CARD  = "#ffffff";
-
-// ─── Edit Profile Modal ───────────────────────────────────────────────────────
-function EditProfileModal({
-  patient,
-  onClose,
-  onSave,
-}: {
-  patient: Patient;
-  onClose: () => void;
-  onSave: (updated: Patient) => void;
-}) {
-  const [form, setForm]     = useState({ ...patient });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState<string | null>(null);
-
-  const set = (field: keyof Patient, value: string | number | null) =>
-    setForm(prev => ({ ...prev, [field]: value }));
-
-  const handleSave = async () => {
-    if (!form.full_name.trim()) { setError("Name is required."); return; }
-    if (!form.phone.trim())     { setError("Phone is required."); return; }
-    setSaving(true);
-    setError(null);
-
-    const { error: supaErr } = await supabase
-      .from("patients")
-      .update({
-        full_name: form.full_name.trim(),
-        age:       form.age ? Number(form.age) : null,
-        gender:    form.gender || null,
-        phone:     form.phone.trim(),
-        village:   form.village?.trim() || null,
-        district:  form.district?.trim() || null,
-        language:  form.language || "english",
-      })
-      .eq("id", patient.id);
-
-    setSaving(false);
-    if (supaErr) { setError("Failed to save. Please try again."); return; }
-    onSave(form);
-  };
-
-  const onBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
-  return (
-    <div style={m.backdrop} onClick={onBackdrop}>
-      <div style={m.modal}>
-        <div style={m.header}>
-          <div style={m.headerTitle}>Edit Profile</div>
-          <button style={m.closeBtn} onClick={onClose}>✕</button>
-        </div>
-
-        <div style={m.body}>
-          {error && <div style={m.errorBanner}>{error}</div>}
-
-          <div style={m.row}>
-            <label style={m.label}>Full Name *</label>
-            <input
-              style={m.input}
-              value={form.full_name}
-              onChange={e => set("full_name", e.target.value)}
-              placeholder="Full name"
-            />
-          </div>
-
-          <div className="edit-two-col" style={m.twoCol}>
-            <div style={m.row}>
-              <label style={m.label}>Age</label>
-              <input
-                style={m.input}
-                type="number"
-                min={0}
-                max={120}
-                value={form.age ?? ""}
-                onChange={e => set("age", e.target.value ? Number(e.target.value) : null)}
-                placeholder="Age"
-              />
-            </div>
-            <div style={m.row}>
-              <label style={m.label}>Gender</label>
-              <select style={m.input} value={form.gender ?? ""} onChange={e => set("gender", e.target.value || null)}>
-                <option value="">Select…</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={m.row}>
-            <label style={m.label}>Phone *</label>
-            <input
-              style={m.input}
-              value={form.phone}
-              onChange={e => set("phone", e.target.value)}
-              placeholder="Phone number"
-            />
-          </div>
-
-          <div className="edit-two-col" style={m.twoCol}>
-            <div style={m.row}>
-              <label style={m.label}>Village</label>
-              <input
-                style={m.input}
-                value={form.village ?? ""}
-                onChange={e => set("village", e.target.value || null)}
-                placeholder="Village"
-              />
-            </div>
-            <div style={m.row}>
-              <label style={m.label}>District</label>
-              <input
-                style={m.input}
-                value={form.district ?? ""}
-                onChange={e => set("district", e.target.value || null)}
-                placeholder="District"
-              />
-            </div>
-          </div>
-
-          <div style={m.row}>
-            <label style={m.label}>Preferred Language</label>
-            <select style={m.input} value={form.language} onChange={e => set("language", e.target.value)}>
-              <option value="english">English</option>
-              <option value="hindi">Hindi</option>
-              <option value="punjabi">Punjabi</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={m.footer}>
-          <button style={m.cancelBtn} onClick={onClose} disabled={saving}>Cancel</button>
-          <button style={{ ...m.saveBtn, opacity: saving ? 0.7 : 1 }} onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={m.spinner} /> Saving…
-              </span>
-            ) : "Save Changes"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Modal styles ─────────────────────────────────────────────────────────────
 const m: Record<string, React.CSSProperties> = {
@@ -197,6 +54,264 @@ const m: Record<string, React.CSSProperties> = {
   spinner:     { width: 14, height: 14, border: "2px solid rgba(255,255,255,.3)", borderTop: "2px solid white", borderRadius: "50%", animation: "spin .7s linear infinite", display: "inline-block" },
 };
 
+// ─── Edit Profile Modal ───────────────────────────────────────────────────────
+function EditProfileModal({ patient, onClose, onSave }: {
+  patient: Patient; onClose: () => void; onSave: (updated: Patient) => void;
+}) {
+  const [form, setForm]     = useState({ ...patient });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState<string | null>(null);
+
+  const set = (field: keyof Patient, value: string | number | null) =>
+    setForm(prev => ({ ...prev, [field]: value }));
+
+  const handleSave = async () => {
+    if (!form.full_name.trim()) { setError("Name is required."); return; }
+    if (!form.phone.trim())     { setError("Phone is required."); return; }
+    setSaving(true); setError(null);
+    const { error: supaErr } = await supabase.from("patients").update({
+      full_name: form.full_name.trim(), age: form.age ? Number(form.age) : null,
+      gender: form.gender || null, phone: form.phone.trim(),
+      village: form.village?.trim() || null, district: form.district?.trim() || null,
+      language: form.language || "english",
+    }).eq("id", patient.id);
+    setSaving(false);
+    if (supaErr) { setError("Failed to save. Please try again."); return; }
+    onSave(form);
+  };
+
+  const onBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  return (
+    <div style={m.backdrop} onClick={onBackdrop}>
+      <div style={m.modal}>
+        <div style={m.header}>
+          <div style={m.headerTitle}>Edit Profile</div>
+          <button style={m.closeBtn} onClick={onClose}>✕</button>
+        </div>
+        <div style={m.body}>
+          {error && <div style={m.errorBanner}>{error}</div>}
+          <div style={m.row}>
+            <label style={m.label}>Full Name *</label>
+            <input style={m.input} value={form.full_name} onChange={e => set("full_name", e.target.value)} placeholder="Full name" />
+          </div>
+          <div className="edit-two-col" style={m.twoCol}>
+            <div style={m.row}>
+              <label style={m.label}>Age</label>
+              <input style={m.input} type="number" min={0} max={120} value={form.age ?? ""}
+                onChange={e => set("age", e.target.value ? Number(e.target.value) : null)} placeholder="Age" />
+            </div>
+            <div style={m.row}>
+              <label style={m.label}>Gender</label>
+              <select style={m.input} value={form.gender ?? ""} onChange={e => set("gender", e.target.value || null)}>
+                <option value="">Select…</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div style={m.row}>
+            <label style={m.label}>Phone *</label>
+            <input style={m.input} value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="Phone number" />
+          </div>
+          <div className="edit-two-col" style={m.twoCol}>
+            <div style={m.row}>
+              <label style={m.label}>Village</label>
+              <input style={m.input} value={form.village ?? ""} onChange={e => set("village", e.target.value || null)} placeholder="Village" />
+            </div>
+            <div style={m.row}>
+              <label style={m.label}>District</label>
+              <input style={m.input} value={form.district ?? ""} onChange={e => set("district", e.target.value || null)} placeholder="District" />
+            </div>
+          </div>
+          <div style={m.row}>
+            <label style={m.label}>Preferred Language</label>
+            <select style={m.input} value={form.language} onChange={e => set("language", e.target.value)}>
+              <option value="english">English</option>
+              <option value="hindi">Hindi</option>
+              <option value="punjabi">Punjabi</option>
+            </select>
+          </div>
+        </div>
+        <div style={m.footer}>
+          <button style={m.cancelBtn} onClick={onClose} disabled={saving}>Cancel</button>
+          <button style={{ ...m.saveBtn, opacity: saving ? 0.7 : 1 }} onClick={handleSave} disabled={saving}>
+            {saving ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={m.spinner} /> Saving…</span> : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Booking Modal ────────────────────────────────────────────────────────────
+function BookingModal({ patient, onClose, onSuccess }: {
+  patient: Patient; onClose: () => void; onSuccess: (consultations: Consultation[]) => void;
+}) {
+  const [availDoctors, setAvailDoctors]       = useState<AvailDoctor[]>([]);
+  const [selectedDoctor, setSelectedDoctor]   = useState<string | null>(null);
+  const [selectedDoctorName, setSelectedDoctorName] = useState("");
+  const [bookSymptoms, setBookSymptoms]       = useState("");
+  const [bookSubmitting, setBookSubmitting]   = useState(false);
+  const [bookError, setBookError]             = useState<string | null>(null);
+  const [bookSuccess, setBookSuccess]         = useState(false);
+  const [loadingDoctors, setLoadingDoctors]   = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("doctors")
+        .select("id, full_name, specialization, consultation_fee, language, is_available")
+        .order("full_name");
+      if (data) setAvailDoctors(data);
+      setLoadingDoctors(false);
+    })();
+  }, []);
+
+  const handleBookSubmit = async () => {
+    if (!selectedDoctor)      { setBookError("Please select a doctor."); return; }
+    if (!bookSymptoms.trim()) { setBookError("Please describe your symptoms."); return; }
+    setBookSubmitting(true); setBookError(null);
+    const { error } = await supabase.from("consultations").insert({
+      doctor_id:  selectedDoctor,
+      patient_id: patient.id,
+      symptoms:   bookSymptoms.trim(),
+      status:     "pending",
+      mode:       "chat",
+    });
+    setBookSubmitting(false);
+    if (error) { setBookError("Failed to book. Please try again."); return; }
+    setBookSuccess(true);
+    const { data } = await supabase.from("consultations").select("*")
+      .eq("patient_id", patient.id).order("created_at", { ascending: false }).limit(10);
+    if (data) onSuccess(data);
+  };
+
+  const onBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  return (
+    <div style={m.backdrop} onClick={onBackdrop}>
+      <div style={{ ...m.modal, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+        <div style={m.header}>
+          <div style={m.headerTitle}>🩺 Book a Consultation</div>
+          <button style={m.closeBtn} onClick={onClose}>✕</button>
+        </div>
+
+        <div style={m.body}>
+          {bookSuccess ? (
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <div style={{ fontSize: 52, marginBottom: 14 }}>✅</div>
+              <div style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 700, color: "#0f1a10", marginBottom: 8 }}>
+                Consultation Requested!
+              </div>
+              <div style={{ fontSize: 13, color: "#718096", lineHeight: 1.7 }}>
+                Dr. {selectedDoctorName} has been notified and will review your request shortly.
+              </div>
+            </div>
+          ) : (
+            <>
+              {bookError && <div style={m.errorBanner}>{bookError}</div>}
+
+              {/* Doctor list */}
+              <div style={m.row}>
+                <label style={m.label}>Select Doctor</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 260, overflowY: "auto", paddingRight: 2 }}>
+                  {loadingDoctors ? (
+                    <div style={{ fontSize: 13, color: "#a0aec0", padding: "16px 0", textAlign: "center" }}>
+                      Loading doctors…
+                    </div>
+                  ) : availDoctors.length === 0 ? (
+                    <div style={{ fontSize: 13, color: "#a0aec0", padding: "16px 0", textAlign: "center" }}>
+                      No doctors available right now.
+                    </div>
+                  ) : availDoctors.map(doc => {
+                    const isSelected = selectedDoctor === doc.id;
+                    const avail = doc.is_available !== false;
+                    return (
+                      <div
+                        key={doc.id}
+                        onClick={() => { if (avail) { setSelectedDoctor(doc.id); setSelectedDoctorName(doc.full_name); setBookError(null); } }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 12,
+                          padding: "11px 14px", borderRadius: 10,
+                          cursor: avail ? "pointer" : "not-allowed",
+                          border: `1.5px solid ${isSelected ? GREEN : "#e2d9ce"}`,
+                          background: isSelected ? "#e8f5f0" : avail ? "#fdfaf7" : "#f5f5f5",
+                          opacity: avail ? 1 : 0.55, transition: "all .15s",
+                        }}
+                      >
+                        <div style={{
+                          width: 38, height: 38, borderRadius: "50%",
+                          background: isSelected ? GREEN : "#e8f5f0",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 18, flexShrink: 0,
+                        }}>
+                          👨‍⚕️
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a202c" }}>Dr. {doc.full_name}</div>
+                          <div style={{ fontSize: 11, color: "#718096", marginTop: 2 }}>
+                            {doc.specialization ?? "General Physician"} · {doc.consultation_fee != null ? `₹${doc.consultation_fee}` : "Free"}
+                            {doc.language ? ` · ${doc.language}` : ""}
+                          </div>
+                        </div>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, flexShrink: 0,
+                          background: avail ? "#dcfce7" : "#fee2e2",
+                          color: avail ? "#166534" : "#991b1b",
+                        }}>
+                          {avail ? "LIVE" : "BUSY"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Symptoms */}
+              <div style={m.row}>
+                <label style={m.label}>Describe Your Symptoms *</label>
+                <textarea
+                  style={{ ...m.input, minHeight: 90, resize: "vertical" as const }}
+                  value={bookSymptoms}
+                  onChange={e => setBookSymptoms(e.target.value)}
+                  placeholder="e.g. Fever for 2 days, headache, sore throat…"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={m.footer}>
+          {bookSuccess ? (
+            <button style={m.saveBtn} onClick={onClose}>
+              Done ✓
+            </button>
+          ) : (
+            <>
+              <button style={m.cancelBtn} onClick={onClose} disabled={bookSubmitting}>Cancel</button>
+              <button
+                style={{ ...m.saveBtn, opacity: bookSubmitting ? 0.7 : 1 }}
+                onClick={handleBookSubmit}
+                disabled={bookSubmitting}
+              >
+                {bookSubmitting
+                  ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={m.spinner} /> Sending…</span>
+                  : "Send Request →"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
@@ -207,8 +322,8 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab]         = useState<"overview" | "consultations" | "records" | "messages">("overview");
   const [isOnline, setIsOnline]           = useState(true);
   const [greeting, setGreeting]           = useState("Good day");
-  const [sideOpen, setSideOpen]           = useState(false);
   const [editOpen, setEditOpen]           = useState(false);
+  const [bookingOpen, setBookingOpen]     = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -218,20 +333,13 @@ export default function DashboardPage() {
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, []);
 
-  // ✅ FIX 3: Ping every 15s (was 30s) — gives 6× safety margin under the 90s threshold
   useEffect(() => {
     if (!patient) return;
-
     const ping = async () => {
-      await supabase
-        .from("patients")
-        .update({ last_seen: new Date().toISOString() })
-        .eq("id", patient.id);
+      await supabase.from("patients").update({ last_seen: new Date().toISOString() }).eq("id", patient.id);
     };
-
-    ping(); // ping immediately on load
-    const interval = setInterval(ping, 15000); // ✅ 15s instead of 30s
-
+    ping();
+    const interval = setInterval(ping, 15000);
     return () => clearInterval(interval);
   }, [patient]);
 
@@ -261,37 +369,21 @@ export default function DashboardPage() {
     router.replace("/auth");
   };
 
-  const handleBook = async () => {
-    if (!patient) return;
-    const { error } = await supabase.from("consultations").insert({ patient_id: patient.id, symptoms: "To be filled", status: "pending", mode: "chat" });
-    if (!error) {
-      const { data } = await supabase.from("consultations").select("*").eq("patient_id", patient.id).order("created_at", { ascending: false }).limit(10);
-      if (data) setConsultations(data);
-      setActiveTab("consultations");
-    }
-  };
-
   const handleDeleteAccount = async () => {
     if (!patient) return;
     setLoading(true);
-
     const res = await fetch("/api/delete-account", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: patient.id }),
     });
-
     const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error ?? "Failed to delete account");
-      setLoading(false);
-      return;
-    }
-
+    if (!res.ok) { alert(data.error ?? "Failed to delete account"); setLoading(false); return; }
     await supabase.auth.signOut();
     router.replace("/auth");
   };
+
+  const openBooking = () => setBookingOpen(true);
 
   if (loading) return (
     <div style={s.loader}>
@@ -333,7 +425,7 @@ export default function DashboardPage() {
         .sign-out   { transition: background .2s, color .2s; }
         .sign-out:hover { background: #fee2e2 !important; color: #dc2626 !important; }
 
-        input:focus, select:focus { border-color: #1a5c45 !important; box-shadow: 0 0 0 3px rgba(26,92,69,.1) !important; background: white !important; }
+        input:focus, select:focus, textarea:focus { border-color: #1a5c45 !important; box-shadow: 0 0 0 3px rgba(26,92,69,.1) !important; background: white !important; }
 
         .dash-sidebar { display: flex; }
         .dash-main    { margin-left: 240px; }
@@ -379,10 +471,10 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Delete Account Modal */}
+      {/* ── Delete Account Modal ── */}
       {deleteConfirm && patient && (
         <div style={m.backdrop} onClick={() => setDeleteConfirm(false)}>
-          <div style={{ ...m.modal, maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...m.modal, maxWidth: 380 }} onClick={e => e.stopPropagation()}>
             <div style={m.header}>
               <div style={{ ...m.headerTitle, color: "#dc2626" }}>⚠️ Delete Account</div>
               <button style={m.closeBtn} onClick={() => setDeleteConfirm(false)}>✕</button>
@@ -392,11 +484,8 @@ export default function DashboardPage() {
             </div>
             <div style={m.footer}>
               <button style={m.cancelBtn} onClick={() => setDeleteConfirm(false)}>Cancel</button>
-              <button
-                style={{ ...m.saveBtn, background: "#dc2626", boxShadow: "0 4px 14px rgba(220,38,38,.25)" }}
-                onClick={handleDeleteAccount}
-                disabled={loading}
-              >
+              <button style={{ ...m.saveBtn, background: "#dc2626", boxShadow: "0 4px 14px rgba(220,38,38,.25)" }}
+                onClick={handleDeleteAccount} disabled={loading}>
                 {loading ? "Deleting…" : "Yes, Delete Everything"}
               </button>
             </div>
@@ -404,7 +493,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Edit Profile Modal */}
+      {/* ── Edit Profile Modal ── */}
       {editOpen && patient && (
         <EditProfileModal
           patient={patient}
@@ -413,7 +502,20 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* ══════════════ DESKTOP SIDEBAR ══════════════ */}
+      {/* ── Booking Modal ── */}
+      {bookingOpen && patient && (
+        <BookingModal
+          patient={patient}
+          onClose={() => setBookingOpen(false)}
+          onSuccess={updated => {
+            setConsultations(updated);
+            setBookingOpen(false);
+            setActiveTab("consultations");
+          }}
+        />
+      )}
+
+      {/* ══ DESKTOP SIDEBAR ══ */}
       <aside className="dash-sidebar" style={s.sidebar}>
         <div style={s.sideTop}>
           <div style={s.sideLogo}>
@@ -442,16 +544,12 @@ export default function DashboardPage() {
             <div style={s.sideProfileSub}>{patient?.village ?? "Patient"}</div>
           </div>
           <button className="sign-out" style={s.signOutBtn} onClick={handleSignOut} title="Sign out">↩</button>
-          <button
-            className="sign-out"
-            style={{ ...s.signOutBtn, borderColor: "#fca5a5", color: "#dc2626" }}
-            onClick={() => setDeleteConfirm(true)}
-            title="Delete account"
-          >🗑</button>
+          <button className="sign-out" style={{ ...s.signOutBtn, borderColor: "#fca5a5", color: "#dc2626" }}
+            onClick={() => setDeleteConfirm(true)} title="Delete account">🗑</button>
         </div>
       </aside>
 
-      {/* ══════════════ MOBILE TOP BAR ══════════════ */}
+      {/* ══ MOBILE TOP BAR ══ */}
       <div className="mob-topbar">
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={s.logoMark}>✚</div>
@@ -468,7 +566,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ══════════════ MAIN CONTENT ══════════════ */}
+      {/* ══ MAIN CONTENT ══ */}
       <main className="dash-main" style={s.main}>
         <div className="tab-content" style={s.tabContent}>
 
@@ -484,7 +582,7 @@ export default function DashboardPage() {
                   <h1 style={s.pageH1}>{greeting}, {firstName} 👋</h1>
                   <p style={s.pageSubtitle}>Here's your health summary</p>
                 </div>
-                <button className="action-btn book-btn" style={s.bookBtn} onClick={handleBook}>
+                <button className="action-btn book-btn" style={s.bookBtn} onClick={openBooking}>
                   + Book Consultation
                 </button>
               </div>
@@ -537,7 +635,7 @@ export default function DashboardPage() {
                     <div style={s.emptyState}>
                       <div style={{ fontSize: 36, marginBottom: 10 }}>🩺</div>
                       <div style={s.emptyText}>No consultations yet</div>
-                      <button style={s.emptyBtn} onClick={handleBook}>Book your first one →</button>
+                      <button style={s.emptyBtn} onClick={openBooking}>Book your first one →</button>
                     </div>
                   ) : (
                     consultations.slice(0, 4).map(c => (
@@ -583,14 +681,14 @@ export default function DashboardPage() {
                   <h1 style={s.pageH1}>Consultations</h1>
                   <p style={s.pageSubtitle}>All your consultation history</p>
                 </div>
-                <button className="action-btn book-btn" style={s.bookBtn} onClick={handleBook}>+ New</button>
+                <button className="action-btn book-btn" style={s.bookBtn} onClick={openBooking}>+ New</button>
               </div>
               {consultations.length === 0 ? (
                 <div style={s.emptyFull}>
                   <div style={{ fontSize: 52 }}>🩺</div>
                   <div style={s.emptyFullTitle}>No consultations yet</div>
                   <div style={s.emptyFullSub}>Book your first to get started</div>
-                  <button style={s.bookBtn} onClick={handleBook}>Book Now →</button>
+                  <button style={s.bookBtn} onClick={openBooking}>Book Now →</button>
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -656,7 +754,7 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* ══════════════ MOBILE BOTTOM NAV ══════════════ */}
+      {/* ══ MOBILE BOTTOM NAV ══ */}
       <nav className="bottom-nav">
         {tabs.map(item => (
           <button key={item.id} onClick={() => setActiveTab(item.id)} style={{ color: activeTab === item.id ? GREEN : "#a0aec0" }}>

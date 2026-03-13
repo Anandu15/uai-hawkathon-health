@@ -208,7 +208,7 @@ export default function AboutPage() {
                 animation: heroLoaded ? "badge-in .6s cubic-bezier(.16,1,.3,1) .1s both" : "none",
               }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", display: "inline-block", animation: "pulse-dot 2s infinite", flexShrink: 0 }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,.8)", letterSpacing: 1.5, textTransform: "uppercase" }}>Hawkathon 2026 · Nabha, Punjab</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,.8)", letterSpacing: 1.5, textTransform: "uppercase" }}>UAI - Hawkathon 2026 · Karjat</span>
               </div>
 
               {/* Headline */}
