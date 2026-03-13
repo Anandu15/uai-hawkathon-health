@@ -241,14 +241,19 @@ export default function SymptomCheckerPage() {
     let worstSeverity: "mild" | "moderate" | "urgent" = "mild";
     let matchedKey: string | null = null;
 
-    for (const sym of symptoms) {
-      const rule = SYMPTOM_RULES[sym];
-      if (!rule) continue;
-      if (rule.severity === "urgent") { worstSeverity = "urgent"; matchedKey = sym; break; }
-      if (rule.severity === "moderate" && worstSeverity !== "moderate") { worstSeverity = "moderate"; matchedKey = sym; }
-      if (rule.severity === "mild" && matchedKey === null) { matchedKey = sym; }
-    }
+    const severityRank = { mild: 1, moderate: 2, urgent: 3 };
 
+for (const sym of symptoms) {
+  const rule = SYMPTOM_RULES[sym];
+  if (!rule) continue;
+
+  if (severityRank[rule.severity] > severityRank[worstSeverity]) {
+    worstSeverity = rule.severity;
+    matchedKey = sym;
+  }
+
+  if (rule.severity === "urgent") break;
+}
     const rule          = matchedKey ? SYMPTOM_RULES[matchedKey] : null;
     const finalSeverity = enhanceOfflineSeverity(symptoms, worstSeverity);
 
